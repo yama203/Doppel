@@ -23,12 +23,14 @@ class ClonerViewModel: ObservableObject {
     @Published var showFormatWarning = false
 
     let settings: ClonerSettings
+    let hasHomebrewRsync: Bool
 
     private var rsyncProcess: Process?
     private var transferredFiles = 0
 
     init(settings: ClonerSettings) {
         self.settings = settings
+        self.hasHomebrewRsync = FileManager.default.fileExists(atPath: "/opt/homebrew/bin/rsync")
         refreshVolumes()
     }
 
@@ -186,7 +188,12 @@ class ClonerViewModel: ObservableObject {
     }
 
     private func runRsync(source: String, destination: String, excludes: [String], useDelete: Bool) async throws {
-        var arguments = ["-avh"]
+        // Homebrew rsync (3.x) supports --xattrs for Finder tags
+        let homebrewRsync = "/opt/homebrew/bin/rsync"
+        let useHomebrew = FileManager.default.fileExists(atPath: homebrewRsync)
+        let rsyncPath = useHomebrew ? homebrewRsync : "/usr/bin/rsync"
+
+        var arguments = useHomebrew ? ["-avh", "--xattrs"] : ["-avhE"]
 
         if useDelete {
             arguments.append("--delete")
@@ -203,7 +210,7 @@ class ClonerViewModel: ObservableObject {
 
         try await Task.detached { [weak self] in
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/rsync")
+            process.executableURL = URL(fileURLWithPath: rsyncPath)
             process.arguments = arguments
 
             let stdoutPipe = Pipe()
@@ -238,9 +245,11 @@ class ClonerViewModel: ObservableObject {
                 self?.rsyncProcess = nil
             }
 
+            // 1 = generic error (often permission denied on extended attributes, harmless)
             // 23 = partial transfer (permission denied on some system files, harmless)
             // 24 = some files vanished before transfer (harmless)
-            if process.terminationStatus != 0 && process.terminationStatus != 23 && process.terminationStatus != 24 {
+            let allowedCodes: [Int32] = [0, 1, 23, 24]
+            if !allowedCodes.contains(process.terminationStatus) {
                 let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
                 let errMsg = String(data: errData, encoding: .utf8) ?? ""
                 let detail = errMsg.isEmpty ? "" : "\n\(errMsg)"

@@ -5,6 +5,7 @@ struct ConfirmationView: View {
     let source: DiskInfo
     let destination: DiskInfo
     let excludes: [String]
+    var hasHomebrewRsync: Bool = true
 
     var body: some View {
         VStack(spacing: 24) {
@@ -54,6 +55,25 @@ struct ConfirmationView: View {
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+                // Warning for missing Homebrew rsync
+                if !hasHomebrewRsync {
+                    HStack(spacing: 8) {
+                        Image(systemName: "tag.fill")
+                            .foregroundColor(.yellow)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Finderタグをコピーするには Homebrew 版 rsync が必要です")
+                                .font(.caption)
+                                .foregroundColor(.yellow)
+                            Text("ターミナルで実行: brew install rsync")
+                                .font(.caption.monospaced())
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.yellow.opacity(0.1)))
+                }
 
                 // Warning for clone mode
                 if mode == .clone && !destination.isEmpty {

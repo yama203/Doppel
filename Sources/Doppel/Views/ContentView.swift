@@ -62,7 +62,8 @@ struct ContentView: View {
                                 mode: viewModel.mode,
                                 source: src,
                                 destination: dst,
-                                excludes: settings.excludedDirectories
+                                excludes: settings.excludedDirectories,
+                                hasHomebrewRsync: viewModel.hasHomebrewRsync
                             )
                         }
                     }
