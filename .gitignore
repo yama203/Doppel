@@ -1,6 +1,7 @@
 # Build artifacts
 .build/
 Doppel.app/
+*.app.zip
 
 # macOS
 .DS_Store
