@@ -23,7 +23,7 @@ struct ContentView: View {
                 switch viewModel.step {
                 case 0:
                     stepWrapper("1/4") {
-                        ModeSelectionView(selectedMode: $viewModel.mode)
+                        ModeSelectionView(selectedMode: $viewModel.mode, deleteRemovedFiles: $viewModel.deleteRemovedFiles)
                     }
                 case 1:
                     stepWrapper("2/4") {
@@ -63,7 +63,8 @@ struct ContentView: View {
                                 source: src,
                                 destination: dst,
                                 excludes: settings.excludedDirectories,
-                                hasHomebrewRsync: viewModel.hasHomebrewRsync
+                                hasHomebrewRsync: viewModel.hasHomebrewRsync,
+                                deleteRemovedFiles: viewModel.deleteRemovedFiles
                             )
                         }
                     }

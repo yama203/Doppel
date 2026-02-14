@@ -6,6 +6,7 @@ struct ConfirmationView: View {
     let destination: DiskInfo
     let excludes: [String]
     var hasHomebrewRsync: Bool = true
+    var deleteRemovedFiles: Bool = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -41,6 +42,17 @@ struct ConfirmationView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, 40)
                     .padding(.top, -12)
+
+                // Backup delete option
+                if mode == .backup {
+                    Divider()
+
+                    InfoRow(
+                        label: "削除同期",
+                        value: deleteRemovedFiles ? "有効" : "無効",
+                        icon: deleteRemovedFiles ? "trash.fill" : "trash.slash.fill"
+                    )
+                }
 
                 Divider()
 

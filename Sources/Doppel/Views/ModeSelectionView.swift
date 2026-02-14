@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ModeSelectionView: View {
     @Binding var selectedMode: ClonerMode
+    @Binding var deleteRemovedFiles: Bool
 
     var body: some View {
         VStack(spacing: 24) {
@@ -22,7 +23,24 @@ struct ModeSelectionView: View {
                     }
                 }
             }
+
+            if selectedMode == .backup {
+                Toggle(isOn: $deleteRemovedFiles) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("コピー元で削除されたファイルをコピー先からも削除する")
+                            .font(.body)
+                        Text("オフの場合、コピー先にのみ残っているファイルはそのまま保持されます")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(.controlBackgroundColor)))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: selectedMode)
     }
 }
 

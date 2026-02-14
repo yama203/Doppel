@@ -21,6 +21,7 @@ class ClonerViewModel: ObservableObject {
     @Published var currentFile: String = ""
     @Published var statusMessage: String = ""
     @Published var showFormatWarning = false
+    @Published var deleteRemovedFiles = false
 
     let settings: ClonerSettings
     let hasHomebrewRsync: Bool
@@ -104,6 +105,7 @@ class ClonerViewModel: ObservableObject {
         destinationVolume = nil
         step = 0
         mode = .clone
+        deleteRemovedFiles = false
         refreshVolumes()
     }
 
@@ -172,7 +174,7 @@ class ClonerViewModel: ObservableObject {
         let excludes = settings.excludedDirectories
         let srcPath = source.mountPoint
         let dstPath = destination.mountPoint
-        let useDelete = mode == .clone
+        let useDelete = mode == .clone || (mode == .backup && deleteRemovedFiles)
 
         Task {
             do {
