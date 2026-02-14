@@ -24,6 +24,10 @@ if [ -f "Resources/AppIcon.icns" ]; then
     cp "Resources/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
 fi
 
+# Ad-hoc code sign
+echo "==> Signing $APP_BUNDLE..."
+codesign --force --deep --sign - "$APP_BUNDLE"
+
 echo "==> Done! $APP_BUNDLE created."
 echo "    You can open it with: open $APP_BUNDLE"
 echo "    Or move it to /Applications: mv $APP_BUNDLE /Applications/"
