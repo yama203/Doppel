@@ -14,6 +14,8 @@ struct CloneProgressView: View {
 
             if state == .completed {
                 completedView
+            } else if case .completedWithWarnings(let message) = state {
+                warningView(message)
             } else if case .error(let message) = state {
                 errorView(message)
             } else {
@@ -75,6 +77,33 @@ struct CloneProgressView: View {
             Text(statusMessage)
                 .font(.body)
                 .foregroundColor(.secondary)
+
+            Button("閉じる") {
+                onDone()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+    }
+
+    private func warningView(_ message: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 64))
+                .foregroundColor(.orange)
+
+            Text("一部のファイルを転送できませんでした")
+                .font(.title)
+                .fontWeight(.bold)
+
+            ScrollView {
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: 400, alignment: .leading)
+            }
+            .frame(maxHeight: 120)
 
             Button("閉じる") {
                 onDone()

@@ -6,6 +6,7 @@ enum ClonerState: Equatable {
     case formatting
     case cloning
     case completed
+    case completedWithWarnings(String)
     case error(String)
 }
 
@@ -178,9 +179,14 @@ class ClonerViewModel: ObservableObject {
 
         Task {
             do {
-                try await runRsync(source: srcPath, destination: dstPath, excludes: excludes, useDelete: useDelete)
-                state = .completed
-                statusMessage = "\(modeLabel)が完了しました"
+                let warning = try await runRsync(source: srcPath, destination: dstPath, excludes: excludes, useDelete: useDelete)
+                if let warning {
+                    state = .completedWithWarnings(warning)
+                    statusMessage = "\(modeLabel)が完了しました（一部エラーあり）"
+                } else {
+                    state = .completed
+                    statusMessage = "\(modeLabel)が完了しました"
+                }
             } catch {
                 if state != .idle {
                     state = .error("\(modeLabel)失敗: \(error.localizedDescription)")
@@ -189,7 +195,7 @@ class ClonerViewModel: ObservableObject {
         }
     }
 
-    private func runRsync(source: String, destination: String, excludes: [String], useDelete: Bool) async throws {
+    private func runRsync(source: String, destination: String, excludes: [String], useDelete: Bool) async throws -> String? {
         // Homebrew rsync (3.x) supports --xattrs for Finder tags
         let homebrewRsync = "/opt/homebrew/bin/rsync"
         let useHomebrew = FileManager.default.fileExists(atPath: homebrewRsync)
@@ -210,7 +216,7 @@ class ClonerViewModel: ObservableObject {
         arguments.append(src)
         arguments.append(dst)
 
-        try await Task.detached { [weak self] in
+        return try await Task.detached { [weak self] in
             let process = Process()
             process.executableURL = URL(fileURLWithPath: rsyncPath)
             process.arguments = arguments
@@ -243,21 +249,31 @@ class ClonerViewModel: ObservableObject {
             // Ensure process has fully exited
             process.waitUntilExit()
 
+            let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            let errMsg = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
             await MainActor.run {
                 self?.rsyncProcess = nil
             }
 
-            // 1 = generic error (often permission denied on extended attributes, harmless)
-            // 23 = partial transfer (permission denied on some system files, harmless)
-            // 24 = some files vanished before transfer (harmless)
-            let allowedCodes: [Int32] = [0, 1, 23, 24]
-            if !allowedCodes.contains(process.terminationStatus) {
-                let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                let errMsg = String(data: errData, encoding: .utf8) ?? ""
-                let detail = errMsg.isEmpty ? "" : "\n\(errMsg)"
-                throw NSError(domain: "Doppel", code: Int(process.terminationStatus),
-                             userInfo: [NSLocalizedDescriptionKey: "rsync がエラーコード \(process.terminationStatus) で終了しました\(detail)"])
+            let code = process.terminationStatus
+            if code == 0 {
+                return nil  // 完全成功
             }
+
+            // 1 = generic error (often permission denied on extended attributes)
+            // 23 = partial transfer (permission denied on some system files)
+            // 24 = some files vanished before transfer
+            if [1, 23, 24].contains(code) {
+                let summary = errMsg.isEmpty
+                    ? "一部のファイルを転送できませんでした（rsync コード \(code)）"
+                    : "一部のファイルを転送できませんでした（rsync コード \(code)）:\n\(errMsg)"
+                return summary
+            }
+
+            let detail = errMsg.isEmpty ? "" : "\n\(errMsg)"
+            throw NSError(domain: "Doppel", code: Int(code),
+                         userInfo: [NSLocalizedDescriptionKey: "rsync がエラーコード \(code) で終了しました\(detail)"])
         }.value
     }
 
